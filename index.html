@@ -276,13 +276,14 @@
     }
 
     // ================================================================
-    // 🔥 FIXED: Button disables itself to prevent double-clicking!
+    // 🔥 FIXED BUTTON LOGIC: Uses only 'onclick' to avoid double triggers
     // ================================================================
-    verifyBtn.addEventListener('click', async function() {
-        // Prevent multiple clicks
-        if (verifyBtn.disabled) return; 
-        verifyBtn.disabled = true; // Disable while sending
-        verifyBtn.textContent = "Sending..."; // Change button text
+
+    // Step 1: Function to send the code
+    async function handleSendCode() {
+        if (verifyBtn.disabled) return;
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = "Sending...";
 
         const email = verifyEmail.value.trim();
         if (!email || !email.includes('@')) {
@@ -291,6 +292,7 @@
             verifyBtn.textContent = 'Send Code';
             return;
         }
+
         const code = generateCode();
         generatedCode = code;
         const sent = await sendVerificationEmail(email, code);
@@ -306,17 +308,18 @@
         verifyCode.value = '';
         verifyCode.focus();
         verifyBtn.textContent = 'Verify Code';
+        verifyBtn.disabled = false;
         verifyError.textContent = '';
         codeSentMsg.textContent = `✅ Code sent to ${email}`;
         currentUserEmail = email;
         verificationStep = 1;
         
-        // Re-enable the button for the next step (Verifying the code)
-        verifyBtn.disabled = false;
-        verifyBtn.onclick = verifyCodeHandler;
-    });
+        // Change the button's action to verify the code
+        verifyBtn.onclick = handleVerifyCode;
+    }
 
-    async function verifyCodeHandler() {
+    // Step 2: Function to verify the code
+    function handleVerifyCode() {
         const code = verifyCode.value.trim();
         if (!code) {
             verifyError.textContent = 'Please enter the verification code.';
@@ -326,6 +329,8 @@
             verifyError.textContent = '❌ Incorrect code. Try again.';
             return;
         }
+        
+        // SUCCESS!
         isVerified = true;
         setCookie('anvaya_user', currentUserEmail, 30);
         overlay.style.display = 'none';
@@ -341,6 +346,11 @@
         mobileRequested = true;
         showSuggestions();
     }
+
+    // Initialize the button with the first action
+    verifyBtn.onclick = handleSendCode;
+
+    // ================================================================
 
     async function logUser(email, mobile) {
         try {
