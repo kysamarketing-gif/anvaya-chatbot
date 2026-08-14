@@ -195,12 +195,12 @@
 
 <script>
     // ================================================================
-    //  CONFIGURATION – YOU MUST FILL THESE
+    //  CONFIGURATION – Service ID is now filled
     // ================================================================
-    const SHEET_CSV_URL = "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_LINK_HERE";   // e.g., https://docs.google.com/spreadsheets/d/.../pub?output=csv
-    const LOG_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";  // from your deployed Apps Script
-    const EMAILJS_SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID";
-    const EMAILJS_TEMPLATE_ID = "YOUR_EMAILJS_VERIFICATION_TEMPLATE_ID";
+    const SHEET_CSV_URL = "YOUR_PUBLISHED_GOOGLE_SHEET_CSV_LINK_HERE";
+    const LOG_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const EMAILJS_SERVICE_ID = "service_9bj3pdp";
+    const EMAILJS_TEMPLATE_ID = "YOUR_EMAILJS_TEMPLATE_ID";
     const EMAILJS_PUBLIC_KEY = "YOUR_EMAILJS_PUBLIC_KEY";
 
     // ================================================================
@@ -213,7 +213,7 @@
     let currentUserMobile = '';
     let mobileRequested = false;
     let generatedCode = '';
-    let verificationStep = 0; // 0=email, 1=code
+    let verificationStep = 0;
 
     const messagesArea = document.getElementById('messagesArea');
     const userInput = document.getElementById('userInput');
@@ -226,7 +226,6 @@
     const verifyError = document.getElementById('verifyError');
     const codeSentMsg = document.getElementById('codeSentMsg');
 
-    // ----- Cookie helpers -----
     function setCookie(name, value, days = 30) {
         const d = new Date();
         d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
@@ -237,7 +236,6 @@
         return match ? match[2] : null;
     }
 
-    // ----- Load knowledge base from Google Sheet (CSV) -----
     async function loadKnowledgeBase() {
         try {
             const resp = await fetch(SHEET_CSV_URL);
@@ -280,7 +278,6 @@
         }
     }
 
-    // ----- Verification logic -----
     function generateCode() {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
@@ -300,7 +297,6 @@
         }
     }
 
-    // Step 1: Send code
     verifyBtn.addEventListener('click', async function() {
         const email = verifyEmail.value.trim();
         if (!email || !email.includes('@')) {
@@ -325,7 +321,6 @@
         verifyBtn.onclick = verifyCodeHandler;
     });
 
-    // Step 2: Verify code
     async function verifyCodeHandler() {
         const code = verifyCode.value.trim();
         if (!code) {
@@ -336,17 +331,14 @@
             verifyError.textContent = '❌ Incorrect code. Try again.';
             return;
         }
-        // Verified!
         isVerified = true;
         setCookie('anvaya_user', currentUserEmail, 30);
         overlay.style.display = 'none';
         userInput.disabled = false;
         sendBtn.disabled = false;
 
-        // Log user (without mobile for now)
         logUser(currentUserEmail, '');
 
-        // ----- FINAL APPROVED WELCOME MESSAGE -----
         const welcomeMsg = `Welcome to ANVAYA. You've earned the trust of your customers. Now own it – under your name. We turn your hard work into your legacy. I'm Raj, founder – and we're doing this together.`;
 
         addMessage(welcomeMsg, 'bot', true);
@@ -355,7 +347,6 @@
         showSuggestions();
     }
 
-    // ----- Logging (Google Apps Script) -----
     async function logUser(email, mobile) {
         try {
             const data = { email, mobile, source: 'chatbot', timestamp: new Date().toISOString() };
@@ -380,7 +371,6 @@
         } catch (e) { /* silent */ }
     }
 
-    // ----- UI Helpers -----
     function addMessage(text, sender, isFirst = false) {
         const wrapper = document.createElement('div');
         wrapper.className = `message ${sender}`;
@@ -433,15 +423,12 @@
         if (show) messagesArea.scrollTop = messagesArea.scrollHeight;
     }
 
-    // ----- Chat engine -----
     function findAnswer(query) {
         if (!query || !knowledgeBase.length) return null;
         const q = query.toLowerCase().trim();
-        // exact match
         for (const item of knowledgeBase) {
             if (item.question.toLowerCase() === q) return item;
         }
-        // keyword scoring
         let best = null;
         let bestScore = 0;
         const words = q.split(/\s+/);
@@ -462,19 +449,16 @@
         return bestScore >= 1 ? best : null;
     }
 
-    // ----- Handle user input (with mobile capture) -----
     async function handleSend() {
         const text = userInput.value.trim();
         if (!text || !isVerified) return;
         userInput.value = '';
 
-        // Mobile capture logic (if we haven't captured yet)
         if (mobileRequested && !currentUserMobile) {
             if (text.toLowerCase() === 'skip') {
                 mobileRequested = false;
                 addMessage('No problem. You can share it later if you wish.', 'bot');
                 logChat(currentUserEmail, 'User skipped mobile', 'system');
-                // Continue to answer as normal
             } else if (/^[0-9+\-\(\)\s]{7,15}$/.test(text)) {
                 currentUserMobile = text;
                 mobileRequested = false;
@@ -485,14 +469,11 @@
                 showSuggestions();
                 return;
             } else {
-                // Not a number, treat as normal query
                 mobileRequested = false;
                 logChat(currentUserEmail, 'User did not provide mobile (entered text)', 'system');
-                // fall through to normal processing
             }
         }
 
-        // Add user message
         addMessage(text, 'user');
         logChat(currentUserEmail, text, 'user');
 
@@ -513,19 +494,15 @@
         }, 500 + Math.random() * 400);
     }
 
-    // ----- Init -----
     async function init() {
-        // Load knowledge base
         const loaded = await loadKnowledgeBase();
         if (!loaded) {
-            // Fallback data
             knowledgeBase = [
                 { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.', category: 'General', keywords: ['anvaya', 'club'] }
             ];
             categories = ['General'];
         }
 
-        // Check cookie for auto-login
         const savedEmail = getCookie('anvaya_user');
         if (savedEmail) {
             currentUserEmail = savedEmail;
@@ -539,7 +516,6 @@
             overlay.style.display = 'flex';
         }
 
-        // Event listeners
         sendBtn.addEventListener('click', handleSend);
         userInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
