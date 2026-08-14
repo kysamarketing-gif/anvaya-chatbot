@@ -176,16 +176,16 @@
 
 <script>
     // ================================================================
-    //  CONFIGURATION – ALL FILLED
+    //  CONFIGURATION
     // ================================================================
 
     // Your Google Sheet CSV link (published)
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
 
-    // Optional: Logging script (can be added later)
+    // Optional: Logging script
     const LOG_SCRIPT_URL = "";
 
-    // EmailJS credentials – already filled
+    // EmailJS credentials
     const EMAILJS_SERVICE_ID = "service_9bj3pdp";
     const EMAILJS_TEMPLATE_ID = "template_wkgh3km";
     const EMAILJS_PUBLIC_KEY = "G3bKr7NOF54xXm2P-";
@@ -223,30 +223,45 @@
         return match ? match[2] : null;
     }
 
+    // ================================================================
+    //  FIXED CSV LOADER (Handles commas inside answers)
+    // ================================================================
     async function loadKnowledgeBase() {
         try {
             const resp = await fetch(SHEET_CSV_URL);
             const csv = await resp.text();
-            const lines = csv.split('\n').filter(line => line.trim() !== '');
-            if (lines.length < 2) {
+            // Handle Windows line breaks and split rows
+            const rawLines = csv.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
+            if (rawLines.length < 2) {
                 console.warn('Sheet appears empty or header missing.');
                 return false;
             }
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+            // Robust split for headers (handles quoted commas)
+            const headerMatches = rawLines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || rawLines[0].split(',');
+            const headers = headerMatches.map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+
             const qIdx = headers.findIndex(h => h.includes('question'));
             const aIdx = headers.findIndex(h => h.includes('answer'));
             const cIdx = headers.findIndex(h => h.includes('category'));
             const kIdx = headers.findIndex(h => h.includes('keyword'));
+
             if (qIdx === -1 || aIdx === -1) {
                 console.error('Could not find Question or Answer columns.');
                 return false;
             }
+
             knowledgeBase = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = lines[i].split(',').map(c => c.trim());
+            for (let i = 1; i < rawLines.length; i++) {
+                // Robust split for data rows (handles commas inside quotes)
+                const matches = rawLines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                if (!matches) continue;
+                const cols = matches.map(val => val.replace(/^"|"$/g, '').trim());
+
                 const question = cols[qIdx] || '';
                 const answer = cols[aIdx] || '';
                 if (!question || !answer) continue;
+
                 const category = (cIdx !== -1 && cols[cIdx]) ? cols[cIdx] : 'General';
                 let keywords = [];
                 if (kIdx !== -1 && cols[kIdx]) {
