@@ -264,13 +264,9 @@
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
-    // ================================================================
-    // 🔥 NEW: Sends email using your Google Apps Script URL
-    // ================================================================
     async function sendVerificationEmail(email, code) {
         const GAS_URL = "https://script.google.com/macros/s/AKfycbypJFE1PoxGkU6eVCI1AcQoxU0HzdI1pty50M26_rAeLI8q95tFS2iKgpn3QwWObxzT/exec";
         try {
-            // Uses a simple GET request to trigger the Google Script
             await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code));
             return true;
         } catch (err) {
@@ -279,19 +275,33 @@
         }
     }
 
+    // ================================================================
+    // 🔥 FIXED: Button disables itself to prevent double-clicking!
+    // ================================================================
     verifyBtn.addEventListener('click', async function() {
+        // Prevent multiple clicks
+        if (verifyBtn.disabled) return; 
+        verifyBtn.disabled = true; // Disable while sending
+        verifyBtn.textContent = "Sending..."; // Change button text
+
         const email = verifyEmail.value.trim();
         if (!email || !email.includes('@')) {
             verifyError.textContent = 'Please enter a valid email address.';
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Send Code';
             return;
         }
         const code = generateCode();
         generatedCode = code;
         const sent = await sendVerificationEmail(email, code);
+        
         if (!sent) {
             verifyError.textContent = 'Failed to send email. Please try again.';
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Send Code';
             return;
         }
+        
         verifyCode.style.display = 'block';
         verifyCode.value = '';
         verifyCode.focus();
@@ -300,6 +310,9 @@
         codeSentMsg.textContent = `✅ Code sent to ${email}`;
         currentUserEmail = email;
         verificationStep = 1;
+        
+        // Re-enable the button for the next step (Verifying the code)
+        verifyBtn.disabled = false;
         verifyBtn.onclick = verifyCodeHandler;
     });
 
@@ -486,7 +499,6 @@
             console.warn('Using fallback knowledge base.');
         }
 
-        // Check if returning user
         const savedEmail = getCookie('anvaya_user');
         if (savedEmail) {
             currentUserEmail = savedEmail;
@@ -497,7 +509,7 @@
             addMessage('Welcome back! 👋 How can I help you today?', 'bot', true);
             showSuggestions();
         } else {
-            overlay.style.display = 'flex'; // Show verification screen for new users
+            overlay.style.display = 'flex';
         }
 
         sendBtn.addEventListener('click', handleSend);
