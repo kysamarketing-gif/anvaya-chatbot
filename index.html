@@ -184,9 +184,8 @@
     let isVerified = false;
     let currentUserEmail = '';
     let currentUserMobile = '';
-    let mobileRequested = false;
+    let chatMessageCounter = 0; // Counter for how many questions they have asked
     let generatedCode = '';
-    let verificationStep = 0;
 
     const messagesArea = document.getElementById('messagesArea');
     const userInput = document.getElementById('userInput');
@@ -209,6 +208,28 @@
         return match ? match[2] : null;
     }
 
+    // ================================================================
+    // 🔥 FIXED PARSER: Reads every character perfectly, no cutting off!
+    // ================================================================
+    function parseCSVLine(line) {
+        let result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            let char = line[i];
+            if (char === '"' && (i === 0 || line[i-1] !== '"')) {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim()); // push the last column
+        return result;
+    }
+
     async function loadKnowledgeBase() {
         try {
             const resp = await fetch(SHEET_CSV_URL);
@@ -219,7 +240,8 @@
                 return false;
             }
 
-            const headerMatches = rawLines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || rawLines[0].split(',');
+            // Parse headers
+            const headerMatches = parseCSVLine(rawLines[0]);
             const headers = headerMatches.map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
             const qIdx = headers.findIndex(h => h.includes('question'));
@@ -234,18 +256,16 @@
 
             knowledgeBase = [];
             for (let i = 1; i < rawLines.length; i++) {
-                const matches = rawLines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-                if (!matches) continue;
-                const cols = matches.map(val => val.replace(/^"|"$/g, '').trim());
+                const cols = parseCSVLine(rawLines[i]);
 
-                const question = cols[qIdx] || '';
-                const answer = cols[aIdx] || '';
+                const question = (cols[qIdx] || '').replace(/^"|"$/g, '').trim();
+                const answer = (cols[aIdx] || '').replace(/^"|"$/g, '').trim();
                 if (!question || !answer) continue;
 
-                const category = (cIdx !== -1 && cols[cIdx]) ? cols[cIdx] : 'General';
+                const category = (cIdx !== -1 && cols[cIdx]) ? cols[cIdx].replace(/^"|"$/g, '').trim() : 'General';
                 let keywords = [];
                 if (kIdx !== -1 && cols[kIdx]) {
-                    keywords = cols[kIdx].split(';').map(k => k.trim().toLowerCase());
+                    keywords = cols[kIdx].replace(/^"|"$/g, '').trim().split(';').map(k => k.trim().toLowerCase());
                 } else {
                     keywords = question.toLowerCase().split(' ');
                 }
@@ -275,12 +295,7 @@
         }
     }
 
-    // ================================================================
-    // 🔥 FIXED BUTTON LOGIC: Uses only 'onclick' to avoid double triggers
-    // ================================================================
-
-    // Step 1: Function to send the code
-    async function handleSendCode() {
+    verifyBtn.onclick = async function() {
         if (verifyBtn.disabled) return;
         verifyBtn.disabled = true;
         verifyBtn.textContent = "Sending...";
@@ -312,13 +327,9 @@
         verifyError.textContent = '';
         codeSentMsg.textContent = `✅ Code sent to ${email}`;
         currentUserEmail = email;
-        verificationStep = 1;
-        
-        // Change the button's action to verify the code
         verifyBtn.onclick = handleVerifyCode;
     }
 
-    // Step 2: Function to verify the code
     function handleVerifyCode() {
         const code = verifyCode.value.trim();
         if (!code) {
@@ -330,7 +341,6 @@
             return;
         }
         
-        // SUCCESS!
         isVerified = true;
         setCookie('anvaya_user', currentUserEmail, 30);
         overlay.style.display = 'none';
@@ -342,15 +352,8 @@
         const welcomeMsg = `Welcome to ANVAYA. You've earned the trust of your customers. Now own it – under your name. We turn your hard work into your legacy. I'm Raj, founder – and we're doing this together.`;
 
         addMessage(welcomeMsg, 'bot', true);
-        addMessage("🔹 Could you share your mobile number so we can assist you better? (Type 'skip' if you prefer not to)", 'bot');
-        mobileRequested = true;
         showSuggestions();
     }
-
-    // Initialize the button with the first action
-    verifyBtn.onclick = handleSendCode;
-
-    // ================================================================
 
     async function logUser(email, mobile) {
         try {
@@ -459,28 +462,21 @@
         if (!text || !isVerified) return;
         userInput.value = '';
 
-        if (mobileRequested && !currentUserMobile) {
-            if (text.toLowerCase() === 'skip') {
-                mobileRequested = false;
-                addMessage('No problem. You can share it later if you wish.', 'bot');
-                logChat(currentUserEmail, 'User skipped mobile', 'system');
-            } else if (/^[0-9+\-\(\)\s]{7,15}$/.test(text)) {
-                currentUserMobile = text;
-                mobileRequested = false;
-                addMessage('✅ Thank you! Your mobile number has been saved.', 'bot');
-                logUser(currentUserEmail, currentUserMobile);
-                logChat(currentUserEmail, `Mobile: ${text}`, 'system');
-                addMessage('How can I help you today?', 'bot');
-                showSuggestions();
-                return;
-            } else {
-                mobileRequested = false;
-                logChat(currentUserEmail, 'User did not provide mobile (entered text)', 'system');
-            }
+        if (!currentUserMobile && /^[0-9+\-\(\)\s]{7,15}$/.test(text)) {
+            currentUserMobile = text;
+            addMessage('✅ Thank you! Your mobile number has been saved.', 'bot');
+            logUser(currentUserEmail, currentUserMobile);
+            logChat(currentUserEmail, `Mobile: ${text}`, 'system');
         }
 
         addMessage(text, 'user');
         logChat(currentUserEmail, text, 'user');
+
+        chatMessageCounter++;
+
+        if (chatMessageCounter === 3 && !currentUserMobile) {
+            addMessage("By the way, we'd love to have your mobile number so we can assist you better if needed. Feel free to share it with me anytime!", 'bot');
+        }
 
         showTyping(true);
 
