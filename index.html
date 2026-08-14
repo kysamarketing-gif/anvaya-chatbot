@@ -172,27 +172,13 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-
 <script>
     // ================================================================
     //  CONFIGURATION
     // ================================================================
-
-    // Your Google Sheet CSV link (published)
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
-
-    // Optional: Logging script
     const LOG_SCRIPT_URL = "";
 
-    // EmailJS credentials
-    const EMAILJS_SERVICE_ID = "service_9bj3pdp";
-    const EMAILJS_TEMPLATE_ID = "template_wkgh3km";
-    const EMAILJS_PUBLIC_KEY = "G3bKr7NOF54xXm2P-";
-
-    // ================================================================
-    //  STATE
-    // ================================================================
     let knowledgeBase = [];
     let categories = [];
     let isVerified = false;
@@ -223,21 +209,16 @@
         return match ? match[2] : null;
     }
 
-    // ================================================================
-    //  FIXED CSV LOADER (Handles commas inside answers)
-    // ================================================================
     async function loadKnowledgeBase() {
         try {
             const resp = await fetch(SHEET_CSV_URL);
             const csv = await resp.text();
-            // Handle Windows line breaks and split rows
             const rawLines = csv.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
             if (rawLines.length < 2) {
                 console.warn('Sheet appears empty or header missing.');
                 return false;
             }
 
-            // Robust split for headers (handles quoted commas)
             const headerMatches = rawLines[0].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || rawLines[0].split(',');
             const headers = headerMatches.map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
@@ -253,7 +234,6 @@
 
             knowledgeBase = [];
             for (let i = 1; i < rawLines.length; i++) {
-                // Robust split for data rows (handles commas inside quotes)
                 const matches = rawLines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
                 if (!matches) continue;
                 const cols = matches.map(val => val.replace(/^"|"$/g, '').trim());
@@ -284,14 +264,14 @@
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
+    // ================================================================
+    // 🔥 NEW: Sends email using your Google Apps Script URL
+    // ================================================================
     async function sendVerificationEmail(email, code) {
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbypJFE1PoxGkU6eVCI1AcQoxU0HzdI1pty50M26_rAeLI8q95tFS2iKgpn3QwWObxzT/exec";
         try {
-            const templateParams = {
-                to_email: email,
-                verification_code: code,
-                from_name: 'ANVAYA'
-            };
-            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);
+            // Uses a simple GET request to trigger the Google Script
+            await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code));
             return true;
         } catch (err) {
             console.error('Email send error:', err);
@@ -309,7 +289,7 @@
         generatedCode = code;
         const sent = await sendVerificationEmail(email, code);
         if (!sent) {
-            verifyError.textContent = 'Failed to send email. Please check your EmailJS setup or try again.';
+            verifyError.textContent = 'Failed to send email. Please try again.';
             return;
         }
         verifyCode.style.display = 'block';
@@ -497,12 +477,8 @@
     }
 
     async function init() {
-        // Initialize EmailJS with the Public Key
-        emailjs.init(EMAILJS_PUBLIC_KEY);
-
         const loaded = await loadKnowledgeBase();
         if (!loaded) {
-            // Fallback data if sheet fails to load
             knowledgeBase = [
                 { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.', category: 'General', keywords: ['anvaya', 'club'] }
             ];
@@ -510,6 +486,7 @@
             console.warn('Using fallback knowledge base.');
         }
 
+        // Check if returning user
         const savedEmail = getCookie('anvaya_user');
         if (savedEmail) {
             currentUserEmail = savedEmail;
@@ -520,7 +497,7 @@
             addMessage('Welcome back! 👋 How can I help you today?', 'bot', true);
             showSuggestions();
         } else {
-            overlay.style.display = 'flex';
+            overlay.style.display = 'flex'; // Show verification screen for new users
         }
 
         sendBtn.addEventListener('click', handleSend);
