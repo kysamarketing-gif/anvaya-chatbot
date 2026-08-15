@@ -285,7 +285,8 @@
     }
 
     async function sendVerificationEmail(email, code) {
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbypJFE1PoxGkU6eVCI1AcQoxU0HzdI1pty50M26_rAeLI8q95tFS2iKgpn3QwWObxzT/exec";
+        // 🔥 CHANGED TO YOUR NEW URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbye-bZDVBu3wNlB-jrqMtBNka1OuVvf4jeuly9QmVD89R3jkLCPnrGsNM2pdUVlt_g8/exec";
         try {
             await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code));
             return true;
