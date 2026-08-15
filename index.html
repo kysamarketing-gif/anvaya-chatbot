@@ -177,7 +177,7 @@
     //  CONFIGURATION
     // ================================================================
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
-    const LOG_SCRIPT_URL = "";
+    const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
 
     let knowledgeBase = [];
     let categories = [];
@@ -208,9 +208,6 @@
         return match ? match[2] : null;
     }
 
-    // ================================================================
-    // 🔥 FIXED PARSER: Reads every character perfectly, no cutting off!
-    // ================================================================
     function parseCSVLine(line) {
         let result = [];
         let current = '';
@@ -226,7 +223,7 @@
                 current += char;
             }
         }
-        result.push(current.trim()); // push the last column
+        result.push(current.trim());
         return result;
     }
 
@@ -240,7 +237,6 @@
                 return false;
             }
 
-            // Parse headers
             const headerMatches = parseCSVLine(rawLines[0]);
             const headers = headerMatches.map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
 
@@ -285,7 +281,6 @@
     }
 
     async function sendVerificationEmail(email, code) {
-        // 🔥 CHANGED TO YOUR NEW URL
         const GAS_URL = "https://script.google.com/macros/s/AKfycbye-bZDVBu3wNlB-jrqMtBNka1OuVvf4jeuly9QmVD89R3jkLCPnrGsNM2pdUVlt_g8/exec";
         try {
             await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code));
