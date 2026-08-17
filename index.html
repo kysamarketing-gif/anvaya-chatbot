@@ -91,116 +91,245 @@
     </div>
 </div>
 <script>
+    // ================================================================
+    //  CONFIGURATION
+    // ================================================================
     const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw2arUBQKvHCvOzUGs9ZU0upF74-l4KiVSvRbUGLinlhobqRB7rsZ7gb9y68AkAIL98/exec";
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
+    
+    // 🔥 YOUR GROQ PROXY URL (Key is securely hidden in this backend)
+    const GROQ_PROXY_URL = "https://script.google.com/macros/s/AKfycbw5UN3o4lxrod6cJnTKSc2k4krMo_LF-F5B9p19lvsFHikEaKZYc68CW23YkewA373H/exec";
 
-    let knowledgeBase = [], isVerified = false, currentUserEmail = '', currentUserMobile = '', chatMessageCounter = 0, generatedCode = '';
-    const messagesArea = document.getElementById('messagesArea'), userInput = document.getElementById('userInput'), sendBtn = document.getElementById('sendBtn'), typingIndicator = document.getElementById('typingIndicator'), overlay = document.getElementById('verifyOverlay'), verifyEmail = document.getElementById('verifyEmail'), verifyCode = document.getElementById('verifyCode'), verifyBtn = document.getElementById('verifyBtn'), verifyError = document.getElementById('verifyError'), codeSentMsg = document.getElementById('codeSentMsg');
-    function setCookie(name, value, days = 30) { const d = new Date(); d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000); document.cookie = name + "=" + value + ";path=/;expires=" + d.toUTCString(); }
-    function getCookie(name) { const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)')); return match ? match[2] : null; }
-    function parseCSVLine(line) {
-        let result = [], current = '', inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            let char = line[i];
-            if (char === '"' && (i === 0 || line[i-1] !== '"')) { inQuotes = !inQuotes; }
-            else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
-            else { current += char; }
-        }
-        result.push(current.trim()); return result;
+    let isVerified = false;
+    let currentUserEmail = '';
+    let currentUserMobile = '';
+    let chatMessageCounter = 0;
+    let generatedCode = '';
+
+    const messagesArea = document.getElementById('messagesArea');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const overlay = document.getElementById('verifyOverlay');
+    const verifyEmail = document.getElementById('verifyEmail');
+    const verifyCode = document.getElementById('verifyCode');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const verifyError = document.getElementById('verifyError');
+    const codeSentMsg = document.getElementById('codeSentMsg');
+
+    function setCookie(name, value, days = 30) {
+        const d = new Date();
+        d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+        document.cookie = name + "=" + value + ";path=/;expires=" + d.toUTCString();
     }
-    async function loadKnowledgeBase() {
+    function getCookie(name) {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+    }
+
+    function generateCode() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    async function sendVerificationEmail(email, code) {
         try {
-            const resp = await fetch(SHEET_CSV_URL);
-            const csv = await resp.text();
-            const lines = csv.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
-            if (lines.length < 2) return false;
-            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-            const qIdx = headers.findIndex(h => h.includes('question'));
-            const aIdx = headers.findIndex(h => h.includes('answer'));
-            if (qIdx === -1 || aIdx === -1) return false;
-            knowledgeBase = [];
-            for (let i = 1; i < lines.length; i++) {
-                const cols = parseCSVLine(lines[i]);
-                const q = (cols[qIdx] || '').replace(/^"|"$/g, '').trim();
-                const a = (cols[aIdx] || '').replace(/^"|"$/g, '').trim();
-                if (q && a) knowledgeBase.push({ id: i, question: q, answer: a, keywords: q.toLowerCase().split(' ') });
-            }
+            await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code));
             return true;
-        } catch (e) { return false; }
+        } catch (err) {
+            console.error('Email send error:', err);
+            return false;
+        }
     }
-    function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
-    async function sendVerificationEmail(email, code) { try { await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code)); return true; } catch (err) { console.error('Email send error:', err); return false; } }
+
     verifyBtn.onclick = async function() {
         if (verifyBtn.disabled) return;
-        verifyBtn.disabled = true; verifyBtn.textContent = "Sending...";
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = "Sending...";
+
         const email = verifyEmail.value.trim();
-        if (!email || !email.includes('@')) { verifyError.textContent = 'Please enter a valid email address.'; verifyBtn.disabled = false; verifyBtn.textContent = 'Send Code'; return; }
-        const code = generateCode(); generatedCode = code;
+        if (!email || !email.includes('@')) {
+            verifyError.textContent = 'Please enter a valid email address.';
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Send Code';
+            return;
+        }
+
+        const code = generateCode();
+        generatedCode = code;
         const sent = await sendVerificationEmail(email, code);
-        if (!sent) { verifyError.textContent = 'Failed to send email. Please try again.'; verifyBtn.disabled = false; verifyBtn.textContent = 'Send Code'; return; }
-        verifyCode.style.display = 'block'; verifyCode.value = ''; verifyCode.focus(); verifyBtn.textContent = 'Verify Code'; verifyBtn.disabled = false; verifyError.textContent = ''; codeSentMsg.textContent = `✅ Code sent to ${email}`; currentUserEmail = email; verifyBtn.onclick = handleVerifyCode;
+        
+        if (!sent) {
+            verifyError.textContent = 'Failed to send email. Please try again.';
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Send Code';
+            return;
+        }
+        
+        verifyCode.style.display = 'block';
+        verifyCode.value = '';
+        verifyCode.focus();
+        verifyBtn.textContent = 'Verify Code';
+        verifyBtn.disabled = false;
+        verifyError.textContent = '';
+        codeSentMsg.textContent = `✅ Code sent to ${email}`;
+        currentUserEmail = email;
+        verifyBtn.onclick = handleVerifyCode;
     }
+
     function handleVerifyCode() {
         const code = verifyCode.value.trim();
-        if (!code) { verifyError.textContent = 'Please enter the verification code.'; return; }
-        if (code !== generatedCode) { verifyError.textContent = '❌ Incorrect code. Try again.'; return; }
-        isVerified = true; setCookie('anvaya_user', currentUserEmail, 30); overlay.style.display = 'none'; userInput.disabled = false; sendBtn.disabled = false; logUser(currentUserEmail, '');
-        addMessage('Welcome to ANVAYA. How can I help you today?', 'bot', true); showSuggestions();
+        if (!code) {
+            verifyError.textContent = 'Please enter the verification code.';
+            return;
+        }
+        if (code !== generatedCode) {
+            verifyError.textContent = '❌ Incorrect code. Try again.';
+            return;
+        }
+        
+        isVerified = true;
+        setCookie('anvaya_user', currentUserEmail, 30);
+        overlay.style.display = 'none';
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+
+        logUser(currentUserEmail, '');
+
+        const welcomeMsg = `Welcome to ANVAYA. You've earned the trust of your customers. Now own it – under your name. We turn your hard work into your legacy. I'm Raj, founder – and we're doing this together.`;
+
+        addMessage(welcomeMsg, 'bot', true);
     }
-    async function logUser(email, mobile) { try { const data = { email, mobile, source: 'chatbot', timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
-    async function logChat(email, message, type) { try { const data = { email, message, type, timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
+
+    async function logUser(email, mobile) {
+        try {
+            const data = { email, mobile, source: 'chatbot', timestamp: new Date().toISOString() };
+            await fetch(LOG_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        } catch (e) { /* silent */ }
+    }
+
+    async function logChat(email, message, type) {
+        try {
+            const data = { email, message, type, timestamp: new Date().toISOString() };
+            await fetch(LOG_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        } catch (e) { /* silent */ }
+    }
+
     function addMessage(text, sender, isFirst = false) {
-        const wrapper = document.createElement('div'); wrapper.className = `message ${sender}`;
-        if (sender === 'bot') { const label = document.createElement('div'); label.className = 'bot-label'; label.innerHTML = '<i class="fas fa-leaf"></i> ANVAYA Bot'; wrapper.appendChild(label); }
-        const content = document.createElement('div'); content.innerHTML = text.replace(/\n/g, '<br>'); wrapper.appendChild(content);
-        const time = document.createElement('div'); time.className = 'timestamp'; const now = new Date(); time.innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); if (sender === 'user') { const tickSpan = document.createElement('span'); tickSpan.className = 'tick delivered'; tickSpan.innerHTML = '✓✓'; time.appendChild(tickSpan); } wrapper.appendChild(time); messagesArea.appendChild(wrapper); messagesArea.scrollTop = messagesArea.scrollHeight;
-    }
-    function showSuggestions() {
-        const wrapper = document.createElement('div'); wrapper.className = 'suggestions';
-        knowledgeBase.slice(0, 5).forEach(item => {
-            const btn = document.createElement('button'); btn.className = 'suggestion-btn'; btn.textContent = item.question;
-            btn.addEventListener('click', () => { userInput.value = item.question; handleSend(); }); wrapper.appendChild(btn);
-        }); messagesArea.appendChild(wrapper); messagesArea.scrollTop = messagesArea.scrollHeight;
-    }
-    function showTyping(show) { typingIndicator.style.display = show ? 'flex' : 'none'; if (show) messagesArea.scrollTop = messagesArea.scrollHeight; }
-    function findAnswer(query) {
-        if (!query) return null; const q = query.toLowerCase().trim();
-        for (const item of knowledgeBase) { if (item.question.toLowerCase() === q) return item; }
-        let best = null, bestScore = 0, words = q.split(/\s+/);
-        for (const item of knowledgeBase) {
-            let score = 0; const qWords = item.question.toLowerCase().split(/\s+/);
-            for (const w of words) { if (qWords.includes(w)) score += 2; if (item.keywords.some(k => k.includes(w) || w.includes(k))) score += 3; }
-            if (score > bestScore) { bestScore = score; best = item; }
+        const wrapper = document.createElement('div');
+        wrapper.className = `message ${sender}`;
+        if (sender === 'bot') {
+            const label = document.createElement('div');
+            label.className = 'bot-label';
+            label.innerHTML = '<i class="fas fa-leaf"></i> ANVAYA Bot';
+            wrapper.appendChild(label);
         }
-        return bestScore >= 1 ? best : null;
+        const content = document.createElement('div');
+        content.innerHTML = text.replace(/\n/g, '<br>');
+        wrapper.appendChild(content);
+
+        const time = document.createElement('div');
+        time.className = 'timestamp';
+        const now = new Date();
+        time.innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (sender === 'user') {
+            const tickSpan = document.createElement('span');
+            tickSpan.className = 'tick delivered';
+            tickSpan.innerHTML = '✓✓';
+            time.appendChild(tickSpan);
+        }
+        wrapper.appendChild(time);
+
+        messagesArea.appendChild(wrapper);
+        messagesArea.scrollTop = messagesArea.scrollHeight;
     }
+
+    function showTyping(show) {
+        typingIndicator.style.display = show ? 'flex' : 'none';
+        if (show) messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    // ================================================================
+    // 🔥 SMART GROQ AI CONNECTION (API key is safely hidden in the Proxy)
+    // ================================================================
+    async function getGroqResponse(userMessage) {
+        const url = GROQ_PROXY_URL + "?msg=" + encodeURIComponent(userMessage);
+        try {
+            const response = await fetch(url);
+            const reply = await response.text();
+            if (reply.startsWith("Error")) throw new Error(reply);
+            return reply;
+        } catch (error) {
+            console.error('Groq proxy error:', error);
+            throw error;
+        }
+    }
+
     async function handleSend() {
-        const text = userInput.value.trim(); if (!text || !isVerified) return; userInput.value = '';
-        if (!currentUserMobile && /^[0-9+\-\(\)\s]{7,15}$/.test(text)) { currentUserMobile = text; addMessage('✅ Thank you! Your mobile number has been saved.', 'bot'); logUser(currentUserEmail, currentUserMobile); logChat(currentUserEmail, `Mobile: ${text}`, 'system'); }
-        addMessage(text, 'user'); logChat(currentUserEmail, text, 'user'); chatMessageCounter++;
-        if (chatMessageCounter === 3 && !currentUserMobile) { addMessage("By the way, we'd love to have your mobile number so we can assist you better if needed. Feel free to share it with me anytime!", 'bot'); }
-        showTyping(true);
-        setTimeout(() => {
-            showTyping(false);
-            const result = findAnswer(text);
-            if (result) { addMessage(`📌 **${result.question}**\n\n${result.answer}`, 'bot'); logChat(currentUserEmail, `${result.question}\n\n${result.answer}`, 'bot'); }
-            else { addMessage(`🤔 I couldn't find a match. Please try rephrasing, or pick a suggestion below.`, 'bot'); showSuggestions(); }
-        }, 500 + Math.random() * 400);
-    }
-    async function init() {
-        const loaded = await loadKnowledgeBase();
-        if (!loaded) {
-            knowledgeBase = [
-                { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.', keywords: ['anvaya','club'] },
-                { id: 2, question: 'How can I get a price estimate?', answer: 'You can chat with our bot or reply to our emails.', keywords: ['price','estimate','cost'] },
-                { id: 3, question: 'Do you ship internationally?', answer: 'Yes, we ship globally.', keywords: ['ship','international','global'] }
-            ];
+        const text = userInput.value.trim();
+        if (!text || !isVerified) return;
+        userInput.value = '';
+
+        if (!currentUserMobile && /^[0-9+\-\(\)\s]{7,15}$/.test(text)) {
+            currentUserMobile = text;
+            addMessage('✅ Thank you! Your mobile number has been saved.', 'bot');
+            logUser(currentUserEmail, currentUserMobile);
+            logChat(currentUserEmail, `Mobile: ${text}`, 'system');
         }
-        const savedEmail = getCookie('anvaya_user');
-        if (savedEmail) { currentUserEmail = savedEmail; isVerified = true; overlay.style.display = 'none'; userInput.disabled = false; sendBtn.disabled = false; addMessage('Welcome back! 👋 How can I help you today?', 'bot', true); showSuggestions(); } else { overlay.style.display = 'flex'; }
-        sendBtn.addEventListener('click', handleSend); userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSend(); } });
+
+        addMessage(text, 'user');
+        logChat(currentUserEmail, text, 'user');
+
+        chatMessageCounter++;
+
+        if (chatMessageCounter === 3 && !currentUserMobile) {
+            addMessage("By the way, we'd love to have your mobile number so we can assist you better if needed. Feel free to share it with me anytime!", 'bot');
+        }
+
+        showTyping(true);
+
+        try {
+            const reply = await getGroqResponse(text);
+            showTyping(false);
+            addMessage(reply, 'bot');
+            logChat(currentUserEmail, reply, 'bot');
+        } catch (err) {
+            showTyping(false);
+            addMessage("I'm having trouble connecting right now. Please try again later.", 'bot');
+        }
     }
+
+    async function init() {
+        const savedEmail = getCookie('anvaya_user');
+        if (savedEmail) {
+            currentUserEmail = savedEmail;
+            isVerified = true;
+            overlay.style.display = 'none';
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            addMessage('Welcome back! 👋 How can I help you today?', 'bot', true);
+        } else {
+            overlay.style.display = 'flex';
+        }
+
+        sendBtn.addEventListener('click', handleSend);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+    }
+
     init();
 </script>
 </body>
