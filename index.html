@@ -39,79 +39,17 @@
             align-items:center; justify-content:center;
             padding:30px 24px; z-index:100; text-align:center;
         }
-        .verify-overlay .logo {
-            width:72px; height:72px;
-            border-radius:50%;
-            border:2px solid #d4af37;
-            display:flex;
-            align-items:center; justify-content:center;
-            font-size:32px; font-weight:700;
-            color:#d4af37;
-            background:transparent;
-            margin-bottom:12px;
-        }
-        .verify-overlay .brand-name {
-            font-size:26px; font-weight:700;
-            color:#d4af37;
-            letter-spacing:1px;
-            margin-bottom:4px;
-        }
-        .verify-overlay .tagline {
-            font-size:14px;
-            color:#d4af37;
-            opacity:0.9;
-            margin-bottom:24px;
-            letter-spacing:0.5px;
-        }
-        .verify-overlay .input-group {
-            width:100%; max-width:280px;
-            margin-bottom:12px;
-        }
-        .verify-overlay .input-group input {
-            width:100%;
-            padding:12px 16px;
-            border-radius:24px;
-            border:1.5px solid #1e3a4d;
-            background:#1e3a4d;
-            color:#fff;
-            font-size:15px;
-            outline:none;
-            transition:0.2s;
-        }
-        .verify-overlay .input-group input:focus {
-            border-color:#d4af37;
-            background:#1e3a4d;
-        }
-        .verify-overlay .input-group input::placeholder {
-            color:#8a9aa8;
-        }
-        .verify-overlay button {
-            width:100%; max-width:280px;
-            padding:12px;
-            border:none;
-            border-radius:24px;
-            background:#d4af37;
-            color:#0b2b3d;
-            font-size:16px; font-weight:600;
-            cursor:pointer;
-            transition:0.2s;
-            margin-top:6px;
-        }
-        .verify-overlay button:hover {
-            transform:scale(1.02);
-            box-shadow:0 4px 14px rgba(212,175,55,0.3);
-        }
-        .verify-overlay .error-msg {
-            color:#f28b82;
-            font-size:13px;
-            margin-top:10px;
-            min-height:20px;
-        }
-        .verify-overlay .code-sent-msg {
-            color:#d4af37;
-            font-size:13px;
-            margin-top:6px;
-        }
+        .verify-overlay .logo { width:72px; height:72px; border-radius:50%; border:2px solid #d4af37; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; color:#d4af37; background:transparent; margin-bottom:12px; }
+        .verify-overlay .brand-name { font-size:26px; font-weight:700; color:#d4af37; letter-spacing:1px; margin-bottom:4px; }
+        .verify-overlay .tagline { font-size:14px; color:#d4af37; opacity:0.9; margin-bottom:24px; letter-spacing:0.5px; }
+        .verify-overlay .input-group { width:100%; max-width:280px; margin-bottom:12px; }
+        .verify-overlay .input-group input { width:100%; padding:12px 16px; border-radius:24px; border:1.5px solid #1e3a4d; background:#1e3a4d; color:#fff; font-size:15px; outline:none; transition:0.2s; }
+        .verify-overlay .input-group input:focus { border-color:#d4af37; background:#1e3a4d; }
+        .verify-overlay .input-group input::placeholder { color:#8a9aa8; }
+        .verify-overlay button { width:100%; max-width:280px; padding:12px; border:none; border-radius:24px; background:#d4af37; color:#0b2b3d; font-size:16px; font-weight:600; cursor:pointer; transition:0.2s; margin-top:6px; }
+        .verify-overlay button:hover { transform:scale(1.02); box-shadow:0 4px 14px rgba(212,175,55,0.3); }
+        .verify-overlay .error-msg { color:#f28b82; font-size:13px; margin-top:10px; min-height:20px; }
+        .verify-overlay .code-sent-msg { color:#d4af37; font-size:13px; margin-top:6px; }
         .input-area { background:#f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:10px; border-top:1px solid #d1d1d1; flex-shrink:0; }
         .input-area input { flex:1; padding:10px 18px; border:none; border-radius:24px; font-size:15px; outline:none; background:white; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
         .input-area input:focus { box-shadow:0 0 0 2px rgba(11,83,69,0.2); }
@@ -155,7 +93,7 @@
 <script>
     const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw2arUBQKvHCvOzUGs9ZU0upF74-l4KiVSvRbUGLinlhobqRB7rsZ7gb9y68AkAIL98/exec";
-    const AI_URL = "https://script.google.com/macros/s/AKfycbwWoXSoYnS_LXYPqg2EzLFaLtozmNhcLv8QKdwFmSmfWLi45uLet5SsquZIKFLSKqX4/exec";
+    const AI_URL = "https://script.google.com/macros/s/AKfycbwEGyw9AzX2mP0Ur2l1W2ITCZOrgoSak-4Snri5OafjIJzHfsNE3oS7GE0Cs3X3H0ZO/exec";
     let knowledgeBase = [], isVerified = false, currentUserEmail = '', currentUserMobile = '', chatMessageCounter = 0, generatedCode = '';
     const messagesArea = document.getElementById('messagesArea'), userInput = document.getElementById('userInput'), sendBtn = document.getElementById('sendBtn'), typingIndicator = document.getElementById('typingIndicator'), overlay = document.getElementById('verifyOverlay'), verifyEmail = document.getElementById('verifyEmail'), verifyCode = document.getElementById('verifyCode'), verifyBtn = document.getElementById('verifyBtn'), verifyError = document.getElementById('verifyError'), codeSentMsg = document.getElementById('codeSentMsg');
     function setCookie(name, value, days = 30) { const d = new Date(); d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000); document.cookie = name + "=" + value + ";path=/;expires=" + d.toUTCString(); }
