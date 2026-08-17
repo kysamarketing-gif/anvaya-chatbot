@@ -1,211 +1,207 @@
-// ================================================================
-// EMAIL AUTOMATION + VERIFICATION + LOGGER (Sheet Attached)
-// ================================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ANVAYA – Micro OEM Club</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,-apple-system,sans-serif; }
+        body { background:#ece5dd; display:flex; justify-content:center; align-items:center; min-height:100vh; margin:0; padding:0; height:100vh; overflow:hidden; }
+        .chat-container { width:100%; max-width:420px; height:100vh; max-height:800px; background:#ffffff; display:flex; flex-direction:column; box-shadow:0 0 30px rgba(0,0,0,0.25); position:relative; border-radius:0; overflow:hidden; }
+        .chat-header { background:linear-gradient(135deg, #0b5345, #1a7a5a); color:white; padding:14px 18px; display:flex; align-items:center; gap:14px; flex-shrink:0; min-height:65px; border-bottom:2px solid #25d366; }
+        .chat-header .back-icon { font-size:20px; cursor:pointer; opacity:0.8; }
+        .chat-header .avatar { width:44px; height:44px; border-radius:50%; background:#25d366; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px; color:#0b5345; border:2px solid #fff; }
+        .chat-header .info { flex:1; }
+        .chat-header .info h3 { font-size:17px; font-weight:600; letter-spacing:0.3px; }
+        .chat-header .info p { font-size:12px; opacity:0.85; display:flex; align-items:center; gap:6px; }
+        .chat-header .info p i { font-size:10px; color:#25d366; }
+        .chat-header .icons { display:flex; gap:18px; font-size:18px; opacity:0.8; }
+        .messages-area { flex:1; overflow-y:auto; padding:16px 16px 8px; background:#e5ddd5; display:flex; flex-direction:column; gap:8px; scroll-behavior:smooth; }
+        .messages-area::-webkit-scrollbar { width:5px; }
+        .messages-area::-webkit-scrollbar-thumb { background:#b0a59a; border-radius:10px; }
+        .message { max-width:82%; padding:10px 14px; border-radius:12px; font-size:14.5px; line-height:1.5; word-wrap:break-word; position:relative; animation:fadeIn 0.25s ease; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+        @keyframes fadeIn { 0%{opacity:0;transform:translateY(6px);} 100%{opacity:1;transform:translateY(0);} }
+        .message.bot { align-self:flex-start; background:#ffffff; color:#1e2a32; border-top-left-radius:2px; }
+        .message.bot .bot-label { font-size:11px; font-weight:600; color:#0b5345; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+        .message.bot .bot-label i { color:#25d366; }
+        .message.user { align-self:flex-end; background:#dcf8c6; color:#1e2a32; border-top-right-radius:2px; }
+        .message .timestamp { font-size:10px; color:#8a8a8a; text-align:right; margin-top:6px; display:flex; align-items:center; justify-content:flex-end; gap:4px; }
+        .message.user .timestamp { color:#6b6b6b; }
+        .message .tick { font-size:14px; color:#34b7f1; }
+        .suggestions { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-self:flex-start; max-width:100%; }
+        .suggestions .suggestion-btn { background:#ffffff; border:1px solid #d4d4d4; border-radius:20px; padding:7px 16px; font-size:13px; font-weight:500; color:#0b5345; cursor:pointer; transition:0.15s; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+        .suggestions .suggestion-btn:hover { background:#f0f0f0; border-color:#a0a0a0; }
+        .verify-overlay {
+            position:absolute; top:0; left:0; right:0; bottom:0;
+            background: #0b2b3d;
+            display:flex; flex-direction:column;
+            align-items:center; justify-content:center;
+            padding:30px 24px; z-index:100; text-align:center;
+        }
+        .verify-overlay .logo { width:72px; height:72px; border-radius:50%; border:2px solid #d4af37; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:700; color:#d4af37; background:transparent; margin-bottom:12px; }
+        .verify-overlay .brand-name { font-size:26px; font-weight:700; color:#d4af37; letter-spacing:1px; margin-bottom:4px; }
+        .verify-overlay .tagline { font-size:14px; color:#d4af37; opacity:0.9; margin-bottom:24px; letter-spacing:0.5px; }
+        .verify-overlay .input-group { width:100%; max-width:280px; margin-bottom:12px; }
+        .verify-overlay .input-group input { width:100%; padding:12px 16px; border-radius:24px; border:1.5px solid #1e3a4d; background:#1e3a4d; color:#fff; font-size:15px; outline:none; transition:0.2s; }
+        .verify-overlay .input-group input:focus { border-color:#d4af37; background:#1e3a4d; }
+        .verify-overlay .input-group input::placeholder { color:#8a9aa8; }
+        .verify-overlay button { width:100%; max-width:280px; padding:12px; border:none; border-radius:24px; background:#d4af37; color:#0b2b3d; font-size:16px; font-weight:600; cursor:pointer; transition:0.2s; margin-top:6px; }
+        .verify-overlay button:hover { transform:scale(1.02); box-shadow:0 4px 14px rgba(212,175,55,0.3); }
+        .verify-overlay .error-msg { color:#f28b82; font-size:13px; margin-top:10px; min-height:20px; }
+        .verify-overlay .code-sent-msg { color:#d4af37; font-size:13px; margin-top:6px; }
+        .input-area { background:#f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:10px; border-top:1px solid #d1d1d1; flex-shrink:0; }
+        .input-area input { flex:1; padding:10px 18px; border:none; border-radius:24px; font-size:15px; outline:none; background:white; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+        .input-area input:focus { box-shadow:0 0 0 2px rgba(11,83,69,0.2); }
+        .input-area button { background:linear-gradient(135deg, #0b5345, #1a7a5a); color:white; border:none; border-radius:50%; width:46px; height:46px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.15s; box-shadow:0 2px 6px rgba(11,83,69,0.2); }
+        .input-area button:hover { transform:scale(1.05); }
+        .input-area button:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+        .typing { align-self:flex-start; background:#ffffff; padding:10px 16px; border-radius:16px; border-top-left-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,0.08); display:none; align-items:center; gap:8px; font-size:13px; color:#555; }
+        .typing .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#8a8a8a; animation:typingBounce 1.4s infinite both; }
+        .typing .dot:nth-child(2) { animation-delay:0.2s; }
+        .typing .dot:nth-child(3) { animation-delay:0.4s; }
+        @keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4;} 30%{transform:translateY(-6px);opacity:1;} }
+        @media (max-width:480px) { .chat-container { max-height:100vh; border-radius:0; } }
+    </style>
+</head>
+<body>
+<div class="chat-container" id="chatContainer">
+    <div class="chat-header">
+        <div class="back-icon"><i class="fas fa-chevron-left"></i></div>
+        <div class="avatar">A</div>
+        <div class="info"><h3>ANVAYA</h3><p><i class="fas fa-circle"></i> Online · Micro OEM Club</p></div>
+        <div class="icons"><i class="fas fa-video"></i><i class="fas fa-phone"></i><i class="fas fa-ellipsis-v"></i></div>
+    </div>
+    <div class="verify-overlay" id="verifyOverlay">
+        <div class="logo">A</div>
+        <div class="brand-name">ANVAYA</div>
+        <div class="tagline">Your sweat. Your trust. Your brand.</div>
+        <div class="input-group"><input type="email" id="verifyEmail" placeholder="Your email address" required /></div>
+        <div class="input-group"><input type="text" id="verifyCode" placeholder="6-digit code" style="display:none;" /></div>
+        <button id="verifyBtn">Send Code</button>
+        <div class="error-msg" id="verifyError"></div>
+        <div class="code-sent-msg" id="codeSentMsg"></div>
+    </div>
+    <div class="messages-area" id="messagesArea"></div>
+    <div class="typing" id="typingIndicator"><span>ANVAYA is typing</span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+    <div class="input-area">
+        <i class="fas fa-smile" style="color:#6b6b6b; font-size:22px;"></i>
+        <input type="text" id="userInput" placeholder="Type a message" disabled />
+        <button id="sendBtn" disabled><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+<script>
+    const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw2arUBQKvHCvOzUGs9ZU0upF74-l4KiVSvRbUGLinlhobqRB7rsZ7gb9y68AkAIL98/exec";
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
 
-// 1. INSTANT WELCOME EMAIL
-function sendWelcomeEmail(e) {
-  const EMAIL_COL = 1; // Column B
-  const NAME_COL = 2;  // Column C
-  const email = e.values[EMAIL_COL];
-  const name = e.values[NAME_COL];
-  if (!email) return;
-
-  const subject = "Your sweat. Your trust. Your brand.";
-  const body = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-    Dear ${name},<br><br>
-    I want to welcome you personally, but more than that—I want to honor you for taking this step.<br><br>
-    For years, you have poured your heart, your sweat, and your hard-earned money into selling other people's brands. You educated your customers, you built the trust, and you made those brands household names in your city.<br><br>
-    And what was the reward?<br>
-    Price wars. Shrinking margins. Watching massive platforms and chains undercut the very market you helped build, taking away the loyal customers you spent years introducing to them. It breaks your heart—knowing how much work you put in, only to be left fighting over tiny margins.<br><br>
-    It doesn't have to be this way anymore.<br><br>
-    <b>Your Sweat. Your Trust. Your Brand.</b><br><br>
-    Every massive global brand you see today started as a small local dream. They grew because local communities trusted them, believed in them, and backed them.<br><br>
-    India has world-class manufacturing right in our backyard. You don't need to depend on anyone else, and you certainly don't need millions of rupees to start.<br><br>
-    That is why ANVAYA — The Micro OEM Club was born.<br><br>
-    We bring industry pioneers like you together. By pooling order batches across pet food, treats, and wellness products, we break down high minimum order limits:<br>
-    • <b>No High Financial Barriers:</b> Launch your own premium product line without heavy risk.<br>
-    • <b>Reclaim Your Margins:</b> Stop fighting price wars on other people's products and start building your own equity.<br>
-    • <b>Proudly Made in India:</b> Use world-class local manufacturing to build a brand that lasts.<br><br>
-    <b>Let’s Build Your Legacy</b><br><br>
-    You don't have to figure this out alone. Whether you want to start small or explore customized formulas for your market, we are standing right beside you.<br><br>
-    <b>Want to talk through your ideas or check product batches?</b><br>
-    We have set up a 24/7 AI Assistant so you can text directly in your preferred language whenever you're ready:<br>
-    <a href="https://kysamarketing-gif.github.io/anvaya-chatbot/">https://kysamarketing-gif.github.io/anvaya-chatbot/</a><br><br>
-    Let's stop building someone else's empire. It's time to build yours.<br><br>
-    With deep respect and warmth,<br><br>
-    <b>Raj Thakkar</b><br>
-    Founder, ANVAYA — The Micro OEM Club<br>
-    📞 +91 7208517859
-  </div>`;
-
-  GmailApp.sendEmail(email, subject, "", {htmlBody: body});
-}
-
-// 2. DAILY REMINDER ENGINE (Runs at 10 AM)
-function sendReminderEmails() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("users");
-  const data = sheet.getDataRange().getValues();
-  const today = new Date(); today.setHours(0,0,0,0);
-  
-  const TIMESTAMP = 0, EMAIL = 1, NAME = 2;
-  const DAY3 = 10, DAY8 = 11, DAY16 = 12, DAY25 = 13, DAY35 = 14, DAY45 = 15, DAY55 = 16;
-  const CALL_DONE = 17, THANK_YOU_SENT = 18;
-
-  for (let i = 1; i < data.length; i++) {
-    let row = data[i];
-    let regDate = new Date(row[TIMESTAMP]); regDate.setHours(0,0,0,0);
-    let diff = Math.floor((today - regDate) / (1000 * 60 * 60 * 24));
-    let email = row[EMAIL], name = row[NAME];
-
-    // POST-CALL LOGIC: You type "Yes" in Column R. Send Thank You and STOP.
-    if (row[CALL_DONE] === "Yes") {
-      if (row[THANK_YOU_SENT] === "") {
-        let thankYouBody = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-          Dear ${name},<br><br>
-          I just wanted to send a quick note to express my appreciation for the time you took to speak with me about your business.<br><br>
-          It was incredibly valuable to hear your perspective. If you have any follow-up questions or need any further clarifications, please don't hesitate to reply to this email. I am always happy to help.<br><br>
-          I hope you have a great day, and I look forward to staying in touch.<br><br>
-          Best regards,<br><br>
-          <b>Raj Thakkar</b><br>
-          Founder, ANVAYA — The Micro OEM Club<br>
-          📞 +91 7208517859
-        </div>`;
-        GmailApp.sendEmail(email, `Appreciated our conversation, ${name}`, "", {htmlBody: thankYouBody});
-        sheet.getRange(i + 1, THANK_YOU_SENT + 1).setValue("Sent on " + today.toDateString());
-      }
-      continue; // SKIP ALL FUTURE REMINDERS
+    let knowledgeBase = [], isVerified = false, currentUserEmail = '', currentUserMobile = '', chatMessageCounter = 0, generatedCode = '';
+    const messagesArea = document.getElementById('messagesArea'), userInput = document.getElementById('userInput'), sendBtn = document.getElementById('sendBtn'), typingIndicator = document.getElementById('typingIndicator'), overlay = document.getElementById('verifyOverlay'), verifyEmail = document.getElementById('verifyEmail'), verifyCode = document.getElementById('verifyCode'), verifyBtn = document.getElementById('verifyBtn'), verifyError = document.getElementById('verifyError'), codeSentMsg = document.getElementById('codeSentMsg');
+    function setCookie(name, value, days = 30) { const d = new Date(); d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000); document.cookie = name + "=" + value + ";path=/;expires=" + d.toUTCString(); }
+    function getCookie(name) { const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)')); return match ? match[2] : null; }
+    function parseCSVLine(line) {
+        let result = [], current = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            let char = line[i];
+            if (char === '"' && (i === 0 || line[i-1] !== '"')) { inQuotes = !inQuotes; }
+            else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+            else { current += char; }
+        }
+        result.push(current.trim()); return result;
     }
-
-    // STANDARD TIMED REMINDERS
-    function sendAndMark(colIndex, dayNum) {
-      if (row[colIndex] === "") {
-        let mail = getReminderEmail(dayNum, name);
-        GmailApp.sendEmail(email, mail.subject, "", {htmlBody: mail.body});
-        sheet.getRange(i + 1, colIndex + 1).setValue("Sent on " + today.toDateString());
-      }
+    async function loadKnowledgeBase() {
+        try {
+            const resp = await fetch(SHEET_CSV_URL);
+            const csv = await resp.text();
+            const lines = csv.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 2) return false;
+            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+            const qIdx = headers.findIndex(h => h.includes('question'));
+            const aIdx = headers.findIndex(h => h.includes('answer'));
+            if (qIdx === -1 || aIdx === -1) return false;
+            knowledgeBase = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseCSVLine(lines[i]);
+                const q = (cols[qIdx] || '').replace(/^"|"$/g, '').trim();
+                const a = (cols[aIdx] || '').replace(/^"|"$/g, '').trim();
+                if (q && a) knowledgeBase.push({ id: i, question: q, answer: a, keywords: q.toLowerCase().split(' ') });
+            }
+            return true;
+        } catch (e) { return false; }
     }
-    
-    if (diff >= 3) sendAndMark(DAY3, 3);
-    if (diff >= 8) sendAndMark(DAY8, 8);
-    if (diff >= 16) sendAndMark(DAY16, 16);
-    if (diff >= 25) sendAndMark(DAY25, 25);
-    if (diff >= 35) sendAndMark(DAY35, 35);
-    if (diff >= 45) sendAndMark(DAY45, 45);
-    if (diff >= 55) sendAndMark(DAY55, 55);
-  }
-}
-
-// 3. EMAIL TEMPLATES FOR DAYS 3, 8, 16, 25, 35, 45, 55
-function getReminderEmail(day, name) {
-  let subject = "", body = "";
-  if (day === 3) {
-    subject = "Still overthinking it? Breaking the Overthinking";
-    body = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-      Dear ${name},<br><br>
-      Right now, you are probably asking yourself:<br>
-      <i>“Should I really launch my own brand... or should I just wait?”</i><br><br>
-      That overthinking is completely normal.<br><br>
-      But think about where you are right now:<br>
-      • You already know the products.<br>
-      • You already have the pet parents' trust.<br>
-      • You already manage the supply chain every single day.<br><br>
-      The only thing standing between you and your own brand is waiting for the “perfect time.”<br><br>
-      You don't need millions. You don't need to take a wild gamble.<br><br>
-      With ANVAYA, you can test tiny batches safely under your own name—without risking your savings.<br><br>
-      Don't let overthinking keep you in the exact same spot next year.<br><br>
-      🎙️ We have set up a 24/7 AI Assistant so you can text directly in your preferred language whenever you're ready:<br>
-      <a href="https://kysamarketing-gif.github.io/anvaya-chatbot/">https://kysamarketing-gif.github.io/anvaya-chatbot/</a><br><br>
-      Warmly,<br><br>
-      <b>Raj Thakkar</b><br>
-      Founder, ANVAYA — The Micro OEM Club<br>
-      📞 +91 7208517859
-    </div>`;
-  } else if (day === 8) {
-    subject = "Are we doing business... or just moving boxes? The Entrepreneur's Challenge";
-    body = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-      Dear ${name},<br><br>
-      Let’s ask ourselves a tough, honest question today.<br><br>
-      Selling famous big-name brands is easy. A customer walks in, asks for a bag, you hand it over, and you collect a small margin.<br><br>
-      It is safe. It is comfortable. But has that comfort made us a little lazy?<br><br>
-      Moving pre-sold packets doesn't require business skill—it's just logistics.<br><br>
-      Real businessmen and businesswomen don't just pass someone else's product across a counter. They take calculated risks. They step out of their comfort zone. They build things of their own.<br><br>
-      You are the reason those big brands became popular in your town in the first place. You used your credibility to build them up.<br><br>
-      So why not use that same skill to build YOUR brand?<br><br>
-      Taking wild, dangerous risks is foolish. But taking zero risk is how a business stays stuck forever.<br><br>
-      ANVAYA gives you a safe, calculated way to step up. Small batches, zero lakhs locked up, full control.<br><br>
-      Stop playing safe with someone else's logo. Take the step you know you need to take.<br><br>
-      🎙️ Ready to discuss a calculated test batch?<br>
-      We have set up a 24/7 AI Assistant so you can text directly in your preferred language whenever you're ready:<br>
-      <a href="https://kysamarketing-gif.github.io/anvaya-chatbot/">https://kysamarketing-gif.github.io/anvaya-chatbot/</a><br><br>
-      With respect for real entrepreneurs,<br><br>
-      <b>Raj Thakkar</b><br>
-      Founder, ANVAYA — The Micro OEM Club<br>
-      📞 +91 7208517859
-    </div>`;
-  } else if (day === 16) {
-    subject = "A quick question for your store... Complete Brand Support";
-    body = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-      Dear ${name},<br><br>
-      Over the last few days, we’ve talked about owning your customer trust and building an asset that truly belongs to your family.<br><br>
-      Launching your own brand sounds big, but you don't have to figure it out alone.<br><br>
-      ANVAYA doesn't just make the product—we handle the whole journey for you:<br>
-      • <b>Legal Setup:</b> We help incorporate your company and handle IPR/trademark work to protect your brand name.<br>
-      • <b>Design & Packaging:</b> We help design your brand packaging and keep printed packaging material ready on hand to eliminate your hassle and delay.<br>
-      • <b>Small Batches:</b> We make sure you can launch safely without locking up big capital.<br><br>
-      Whenever you want to explore what your own brand could look like, let's talk.<br><br>
-      You can simply reply "CALL ME" to this email and I’ll reach out personally.<br><br>
-      We have set up a 24/7 AI Assistant so you can text directly in your preferred language whenever you're ready:<br>
-      <a href="https://kysamarketing-gif.github.io/anvaya-chatbot/">https://kysamarketing-gif.github.io/anvaya-chatbot/</a><br><br>
-      Whenever you are ready to take that step, ANVAYA is here to build it with you.<br><br>
-      Warmly,<br><br>
-      <b>Raj Thakkar</b><br>
-      Founder, ANVAYA — The Micro OEM Club<br>
-      📞 +91 7208517859
-    </div>`;
-  } else { // Days 25, 35, 45, 55
-    subject = `Can I give you a quick call? Personal Founder Call`;
-    body = `<div style="font-family: Arial, sans-serif; font-size: 18px; line-height: 1.8; color: #222;">
-      Dear ${name},<br><br>
-      Building something of your own is a big deal. Whether you run a retail shop, manage distribution, or are planning to launch a brand online, taking that first step always comes with honest doubts, questions, and a bit of uncertainty.<br><br>
-      I know reading emails from a company doesn't always answer what’s actually on your mind.<br><br>
-      That's why I’d love to speak with you personally.<br><br>
-      I’m setting aside time this week to talk directly with people who are thinking about launching their own pet brand. No pressure, no hard pitch—just an honest conversation between two entrepreneurs to understand where you are, clear any doubts you have, and see if ANVAYA is the right fit to support your dream.<br><br>
-      🗓️ Pick a time that is convenient for you:<br>
-      👉 <a href="https://calendly.com/kysamarketing/30min">Click Here to Choose a Time for Our Call</a><br><br>
-      If scheduling is a hassle, simply reply to this email with your phone number and a good time to talk (for example: "Call me tomorrow at 4 PM"), and I will personally ring you.<br><br>
-      We have set up a 24/7 AI Assistant so you can text directly in your preferred language whenever you're ready:<br>
-      <a href="https://kysamarketing-gif.github.io/anvaya-chatbot/">https://kysamarketing-gif.github.io/anvaya-chatbot/</a><br><br>
-      I genuinely look forward to connecting with you.<br><br>
-      Warmly,<br><br>
-      <b>Raj Thakkar</b><br>
-      Founder, ANVAYA — The Micro OEM Club<br>
-      📞 +91 7208517859
-    </div>`;
-  }
-  return { subject, body };
-}
-
-// 4. CHAT BOT EMAIL VERIFICATION
-function sendVerificationEmail(email, code) {
-    try {
-        MailApp.sendEmail({
-            to: email,
-            subject: "ANVAYA Verification Code",
-            body: "Your ANVAYA verification code is: " + code
-        });
-        return true;
-    } catch (err) {
-        console.error('Email send error:', err);
-        return false;
+    function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+    async function sendVerificationEmail(email, code) { try { await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code)); return true; } catch (err) { console.error('Email send error:', err); return false; } }
+    verifyBtn.onclick = async function() {
+        if (verifyBtn.disabled) return;
+        verifyBtn.disabled = true; verifyBtn.textContent = "Sending...";
+        const email = verifyEmail.value.trim();
+        if (!email || !email.includes('@')) { verifyError.textContent = 'Please enter a valid email address.'; verifyBtn.disabled = false; verifyBtn.textContent = 'Send Code'; return; }
+        const code = generateCode(); generatedCode = code;
+        const sent = await sendVerificationEmail(email, code);
+        if (!sent) { verifyError.textContent = 'Failed to send email. Please try again.'; verifyBtn.disabled = false; verifyBtn.textContent = 'Send Code'; return; }
+        verifyCode.style.display = 'block'; verifyCode.value = ''; verifyCode.focus(); verifyBtn.textContent = 'Verify Code'; verifyBtn.disabled = false; verifyError.textContent = ''; codeSentMsg.textContent = `✅ Code sent to ${email}`; currentUserEmail = email; verifyBtn.onclick = handleVerifyCode;
     }
-}
-
-// 5. CHAT LOGGER
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Client Chat Logs");
-  if (sheet) {
-    sheet.appendRow([new Date(), data.email, data.type, data.message]);
-  }
-  return ContentService.createTextOutput("Logged");
-}
+    function handleVerifyCode() {
+        const code = verifyCode.value.trim();
+        if (!code) { verifyError.textContent = 'Please enter the verification code.'; return; }
+        if (code !== generatedCode) { verifyError.textContent = '❌ Incorrect code. Try again.'; return; }
+        isVerified = true; setCookie('anvaya_user', currentUserEmail, 30); overlay.style.display = 'none'; userInput.disabled = false; sendBtn.disabled = false; logUser(currentUserEmail, '');
+        addMessage('Welcome to ANVAYA. How can I help you today?', 'bot', true); showSuggestions();
+    }
+    async function logUser(email, mobile) { try { const data = { email, mobile, source: 'chatbot', timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
+    async function logChat(email, message, type) { try { const data = { email, message, type, timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
+    function addMessage(text, sender, isFirst = false) {
+        const wrapper = document.createElement('div'); wrapper.className = `message ${sender}`;
+        if (sender === 'bot') { const label = document.createElement('div'); label.className = 'bot-label'; label.innerHTML = '<i class="fas fa-leaf"></i> ANVAYA Bot'; wrapper.appendChild(label); }
+        const content = document.createElement('div'); content.innerHTML = text.replace(/\n/g, '<br>'); wrapper.appendChild(content);
+        const time = document.createElement('div'); time.className = 'timestamp'; const now = new Date(); time.innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); if (sender === 'user') { const tickSpan = document.createElement('span'); tickSpan.className = 'tick delivered'; tickSpan.innerHTML = '✓✓'; time.appendChild(tickSpan); } wrapper.appendChild(time); messagesArea.appendChild(wrapper); messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+    function showSuggestions() {
+        const wrapper = document.createElement('div'); wrapper.className = 'suggestions';
+        knowledgeBase.slice(0, 5).forEach(item => {
+            const btn = document.createElement('button'); btn.className = 'suggestion-btn'; btn.textContent = item.question;
+            btn.addEventListener('click', () => { userInput.value = item.question; handleSend(); }); wrapper.appendChild(btn);
+        }); messagesArea.appendChild(wrapper); messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+    function showTyping(show) { typingIndicator.style.display = show ? 'flex' : 'none'; if (show) messagesArea.scrollTop = messagesArea.scrollHeight; }
+    function findAnswer(query) {
+        if (!query) return null; const q = query.toLowerCase().trim();
+        for (const item of knowledgeBase) { if (item.question.toLowerCase() === q) return item; }
+        let best = null, bestScore = 0, words = q.split(/\s+/);
+        for (const item of knowledgeBase) {
+            let score = 0; const qWords = item.question.toLowerCase().split(/\s+/);
+            for (const w of words) { if (qWords.includes(w)) score += 2; if (item.keywords.some(k => k.includes(w) || w.includes(k))) score += 3; }
+            if (score > bestScore) { bestScore = score; best = item; }
+        }
+        return bestScore >= 1 ? best : null;
+    }
+    async function handleSend() {
+        const text = userInput.value.trim(); if (!text || !isVerified) return; userInput.value = '';
+        if (!currentUserMobile && /^[0-9+\-\(\)\s]{7,15}$/.test(text)) { currentUserMobile = text; addMessage('✅ Thank you! Your mobile number has been saved.', 'bot'); logUser(currentUserEmail, currentUserMobile); logChat(currentUserEmail, `Mobile: ${text}`, 'system'); }
+        addMessage(text, 'user'); logChat(currentUserEmail, text, 'user'); chatMessageCounter++;
+        if (chatMessageCounter === 3 && !currentUserMobile) { addMessage("By the way, we'd love to have your mobile number so we can assist you better if needed. Feel free to share it with me anytime!", 'bot'); }
+        showTyping(true);
+        setTimeout(() => {
+            showTyping(false);
+            const result = findAnswer(text);
+            if (result) { addMessage(`📌 **${result.question}**\n\n${result.answer}`, 'bot'); logChat(currentUserEmail, `${result.question}\n\n${result.answer}`, 'bot'); }
+            else { addMessage(`🤔 I couldn't find a match. Please try rephrasing, or pick a suggestion below.`, 'bot'); showSuggestions(); }
+        }, 500 + Math.random() * 400);
+    }
+    async function init() {
+        const loaded = await loadKnowledgeBase();
+        if (!loaded) {
+            knowledgeBase = [
+                { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.', keywords: ['anvaya','club'] },
+                { id: 2, question: 'How can I get a price estimate?', answer: 'You can chat with our bot or reply to our emails.', keywords: ['price','estimate','cost'] },
+                { id: 3, question: 'Do you ship internationally?', answer: 'Yes, we ship globally.', keywords: ['ship','international','global'] }
+            ];
+        }
+        const savedEmail = getCookie('anvaya_user');
+        if (savedEmail) { currentUserEmail = savedEmail; isVerified = true; overlay.style.display = 'none'; userInput.disabled = false; sendBtn.disabled = false; addMessage('Welcome back! 👋 How can I help you today?', 'bot', true); showSuggestions(); } else { overlay.style.display = 'flex'; }
+        sendBtn.addEventListener('click', handleSend); userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSend(); } });
+    }
+    init();
+</script>
+</body>
+</html>
