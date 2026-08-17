@@ -176,18 +176,19 @@
     // ================================================================
     //  CONFIGURATION
     // ================================================================
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTDOzUk9BGzHFVVKKKZ4Dmndjs_5ZnKszF0pk9Xar8ViNVNPRYYW6OyBtwCoMOdvOpWg6R2Ij_Nt8Wy/pub?output=csv";
     const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
 
-    // 🔥 YOUR NEW FINAL VERIFICATION URL
+    // Your Verification URL (Sends the 6-digit code)
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw2arUBQKvHCvOzUGs9ZU0upF74-l4KiVSvRbUGLinlhobqRB7rsZ7gb9y68AkAIL98/exec";
 
+    // 🔥 NEW: Your AI URL (Reads Anvaya intelligence Doc)
+    const AI_URL = "https://script.google.com/macros/s/AKfycbxX9uXA4Vh49Jp1Y-7L7GJEiea-uC7tutiTiJIFsPo_bR4F2bygRliiUmbAwpEVTgvA/exec";
+
     let knowledgeBase = [];
-    let categories = [];
     let isVerified = false;
     let currentUserEmail = '';
     let currentUserMobile = '';
-    let chatMessageCounter = 0; // Counter for how many questions they have asked
+    let chatMessageCounter = 0;
     let generatedCode = '';
 
     const messagesArea = document.getElementById('messagesArea');
@@ -211,71 +212,28 @@
         return match ? match[2] : null;
     }
 
-    function parseCSVLine(line) {
-        let result = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            let char = line[i];
-            if (char === '"' && (i === 0 || line[i-1] !== '"')) {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
-        }
-        result.push(current.trim());
-        return result;
-    }
-
+    // 🔥 REPLACED: Instead of loading CSV, we ask the AI to generate 5 suggestion buttons
     async function loadKnowledgeBase() {
         try {
-            const resp = await fetch(SHEET_CSV_URL);
-            const csv = await resp.text();
-            const rawLines = csv.replace(/\r\n/g, '\n').split('\n').filter(line => line.trim() !== '');
-            if (rawLines.length < 2) {
-                console.warn('Sheet appears empty or header missing.');
-                return false;
-            }
-
-            const headerMatches = parseCSVLine(rawLines[0]);
-            const headers = headerMatches.map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
-
-            const qIdx = headers.findIndex(h => h.includes('question'));
-            const aIdx = headers.findIndex(h => h.includes('answer'));
-            const cIdx = headers.findIndex(h => h.includes('category'));
-            const kIdx = headers.findIndex(h => h.includes('keyword'));
-
-            if (qIdx === -1 || aIdx === -1) {
-                console.error('Could not find Question or Answer columns.');
-                return false;
-            }
-
-            knowledgeBase = [];
-            for (let i = 1; i < rawLines.length; i++) {
-                const cols = parseCSVLine(rawLines[i]);
-
-                const question = (cols[qIdx] || '').replace(/^"|"$/g, '').trim();
-                const answer = (cols[aIdx] || '').replace(/^"|"$/g, '').trim();
-                if (!question || !answer) continue;
-
-                const category = (cIdx !== -1 && cols[cIdx]) ? cols[cIdx].replace(/^"|"$/g, '').trim() : 'General';
-                let keywords = [];
-                if (kIdx !== -1 && cols[kIdx]) {
-                    keywords = cols[kIdx].replace(/^"|"$/g, '').trim().split(';').map(k => k.trim().toLowerCase());
-                } else {
-                    keywords = question.toLowerCase().split(' ');
-                }
-                knowledgeBase.push({ id: i, question, answer, category, keywords });
-            }
-            categories = [...new Set(knowledgeBase.map(item => item.category))];
-            console.log(`✅ Loaded ${knowledgeBase.length} entries from sheet.`);
+            const response = await fetch(AI_URL + "?msg=Generate 5 short questions about ANVAYA. Output them as a numbered list.");
+            const text = await response.text();
+            // Parse the numbered list into an array of objects
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            knowledgeBase = lines.map((line, index) => {
+                // Remove leading numbers like "1. " or "1)"
+                const question = line.replace(/^\d+[\.\)]\s*/, '').trim();
+                return { id: index + 1, question: question, answer: "" };
+            });
+            if (knowledgeBase.length === 0) throw new Error("No suggestions");
             return true;
         } catch (e) {
-            console.error('Error loading sheet:', e);
-            return false;
+            // Fallback if AI fails
+            knowledgeBase = [
+                { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.' },
+                { id: 2, question: 'How can I get a price estimate?', answer: 'You can chat with our bot or reply to our emails.' },
+                { id: 3, question: 'Do you ship internationally?', answer: 'Yes, we ship globally.' }
+            ];
+            return true;
         }
     }
 
@@ -429,31 +387,8 @@
         if (show) messagesArea.scrollTop = messagesArea.scrollHeight;
     }
 
-    function findAnswer(query) {
-        if (!query || !knowledgeBase.length) return null;
-        const q = query.toLowerCase().trim();
-        for (const item of knowledgeBase) {
-            if (item.question.toLowerCase() === q) return item;
-        }
-        let best = null;
-        let bestScore = 0;
-        const words = q.split(/\s+/);
-        for (const item of knowledgeBase) {
-            let score = 0;
-            const qWords = item.question.toLowerCase().split(/\s+/);
-            const kws = item.keywords.map(k => k.toLowerCase());
-            for (const w of words) {
-                if (qWords.includes(w)) score += 2;
-                if (kws.some(kw => kw.includes(w) || w.includes(kw))) score += 3;
-                if (item.category.toLowerCase().includes(w)) score += 1;
-            }
-            if (score > bestScore) {
-                bestScore = score;
-                best = item;
-            }
-        }
-        return bestScore >= 1 ? best : null;
-    }
+    // 🔥 REPLACED: We no longer use `findAnswer`. Instead, we ask the AI directly.
+    // The original findAnswer function is removed to keep the code clean.
 
     async function handleSend() {
         const text = userInput.value.trim();
@@ -478,14 +413,17 @@
 
         showTyping(true);
 
-        setTimeout(() => {
-            showTyping(false);
-            const result = findAnswer(text);
-            if (result) {
-                const reply = `📌 **${result.question}**\n\n${result.answer}`;
+        // 🔥 CHANGED: Replace the internal lookup with an AI fetch
+        setTimeout(async () => {
+            try {
+                const response = await fetch(AI_URL + "?msg=" + encodeURIComponent(text));
+                const reply = await response.text();
+                
+                showTyping(false);
                 addMessage(reply, 'bot');
                 logChat(currentUserEmail, reply, 'bot');
-            } else {
+            } catch (err) {
+                showTyping(false);
                 const fallback = `🤔 I couldn't find a match. Please try rephrasing, or pick a suggestion below.`;
                 addMessage(fallback, 'bot');
                 showSuggestions();
@@ -494,14 +432,8 @@
     }
 
     async function init() {
-        const loaded = await loadKnowledgeBase();
-        if (!loaded) {
-            knowledgeBase = [
-                { id: 1, question: 'What is ANVAYA?', answer: 'ANVAYA is a Micro OEM Club that helps you launch your own brand with small batches.', category: 'General', keywords: ['anvaya', 'club'] }
-            ];
-            categories = ['General'];
-            console.warn('Using fallback knowledge base.');
-        }
+        // 🔥 CHANGED: `loadKnowledgeBase` is now an AI call to generate suggestions, not a CSV download
+        await loadKnowledgeBase();
 
         const savedEmail = getCookie('anvaya_user');
         if (savedEmail) {
