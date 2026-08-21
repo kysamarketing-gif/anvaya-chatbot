@@ -44,7 +44,7 @@
         .verify-overlay button:hover { transform:scale(1.02); box-shadow:0 4px 14px rgba(212,175,55,0.3); }
         .verify-overlay .error-msg { color:#f28b82; font-size:13px; margin-top:10px; min-height:20px; }
         .verify-overlay .code-sent-msg { color:#d4af37; font-size:13px; margin-top:6px; }
-        .input-area { background:#f0f0f0; padding:8px 14px; display:flex; flex-direction:column; align-items:center; gap:10px; border-top:1px solid #d1d1d1; flex-shrink:0; }
+        .input-area { background:#f0f0f0; padding:8px 14px; display:flex; align-items:center; gap:10px; border-top:1px solid #d1d1d1; flex-shrink:0; }
         .input-area input { flex:1; padding:10px 18px; border:none; border-radius:24px; font-size:15px; outline:none; background:white; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
         .input-area input:focus { box-shadow:0 0 0 2px rgba(11,83,69,0.2); }
         .input-area button { background:linear-gradient(135deg, #0b5345, #1a7a5a); color:white; border:none; border-radius:50%; width:46px; height:46px; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.15s; box-shadow:0 2px 6px rgba(11,83,69,0.2); }
@@ -56,7 +56,8 @@
         .typing .dot:nth-child(3) { animation-delay:0.4s; }
         @keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4;} 30%{transform:translateY(-6px);opacity:1;} }
         @media (max-width:480px) { .chat-container { max-height:100dvh; border-radius:0; } }
-        .ai-disclaimer { width: 100%; text-align: center; font-size: 11px; color: #777; padding: 8px 0; border-top: 1px solid #e0e0e0; font-style: italic; background: #f9f9f9; flex-shrink: 0; }
+        /* NEW DISCLAIMER FOOTER (The ONLY line added) */
+        .ai-disclaimer { width: 100%; text-align: center; font-size: 10px; color: #888; padding: 6px 0 4px 0; border-top: 1px solid #e5e5e5; font-style: italic; background: transparent; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -83,8 +84,8 @@
         <i class="fas fa-smile" style="color:#6b6b6b; font-size:22px;"></i>
         <input type="text" id="userInput" placeholder="Type a message" disabled />
         <button id="sendBtn" disabled><i class="fas fa-paper-plane"></i></button>
-        <div class="ai-disclaimer">✨ I'm an AI assistant and may occasionally make mistakes. All final confirmations will be personally handled when you decide to officially become an ANVAYA Micro OEM Club member.</div>
     </div>
+    <div class="ai-disclaimer">✨ I'm an AI assistant and may occasionally make mistakes. All final confirmations will be personally handled when you decide to officially become an ANVAYA Micro OEM Club member.</div>
 </div>
 <script>
     const LOG_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_CtrjHymbNqj-9KzSuvRZ00tUECyU1AU2G8zJYrfR2RJwQvTIrEwIArFs3BTpRSHY/exec";
@@ -98,8 +99,7 @@
     function generateCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
     async function sendVerificationEmail(email, code) { try { await fetch(GAS_URL + "?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code)); return true; } catch (err) { console.error('Email send error:', err); return false; } }
     verifyBtn.onclick = async function() {
-        if (verifyBtn.disabled) return;
-        verifyBtn.disabled = true; verifyBtn.textContent = "Sending...";
+        if (verifyBtn.disabled) return; verifyBtn.disabled = true; verifyBtn.textContent = "Sending...";
         const email = verifyEmail.value.trim();
         if (!email || !email.includes('@')) { verifyError.textContent = 'Please enter a valid email address.'; verifyBtn.disabled = false; verifyBtn.textContent = 'Send Code'; return; }
         const code = generateCode(); generatedCode = code;
@@ -112,13 +112,14 @@
         if (!code) { verifyError.textContent = 'Please enter the verification code.'; return; }
         if (code !== generatedCode) { verifyError.textContent = '❌ Incorrect code. Try again.'; return; }
         isVerified = true; setCookie('anvaya_user', currentUserEmail, 30); overlay.style.display = 'none'; userInput.disabled = false; sendBtn.disabled = false; logUser(currentUserEmail, '');
-        addMessage('Welcome to ANVAYA. How can I help you today?', 'bot', true);
+        const welcomeMsg = `Welcome to ANVAYA. You've earned the trust of your customers. Now own it – under your name. We turn your hard work into your legacy. I'm Raj, founder – and we're doing this together.`;
+        addMessage(welcomeMsg, 'bot', true);
     }
     async function logUser(email, mobile) { try { const data = { email, mobile, source: 'chatbot', timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
     async function logChat(email, message, type) { try { const data = { email, message, type, timestamp: new Date().toISOString() }; await fetch(LOG_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); } catch (e) {} }
     function addMessage(text, sender, isFirst = false) {
         const wrapper = document.createElement('div'); wrapper.className = `message ${sender}`;
-        if (sender === 'bot') { const label = document.createElement('div'); label.className = 'bot-label'; label.innerHTML = 'ToTo - ANVAYA'; wrapper.appendChild(label); }
+        if (sender === 'bot') { const label = document.createElement('div'); label.className = 'bot-label'; label.innerHTML = '<i class="fas fa-leaf"></i> ToTo - ANVAYA'; wrapper.appendChild(label); }
         const content = document.createElement('div'); content.innerHTML = text.replace(/\n/g, '<br>'); wrapper.appendChild(content);
         const time = document.createElement('div'); time.className = 'timestamp'; const now = new Date(); time.innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); if (sender === 'user') { const tickSpan = document.createElement('span'); tickSpan.className = 'tick delivered'; tickSpan.innerHTML = '✓✓'; time.appendChild(tickSpan); } wrapper.appendChild(time); messagesArea.appendChild(wrapper); messagesArea.scrollTop = messagesArea.scrollHeight;
     }
